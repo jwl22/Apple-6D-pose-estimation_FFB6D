@@ -1,3 +1,9 @@
+Modified to perform 6D Pose Estimation of apple using FFB6D.<br>
+![000082-color](https://github.com/jwl22/Apple-6D-pose-estimation_FFB6D/assets/96900435/0a32d38b-413a-44d2-9387-17ca7c36a74d)
+![82_pick](https://github.com/jwl22/Apple-6D-pose-estimation_FFB6D/assets/96900435/f304c336-5406-4638-9d14-6feae4dd251e)
+
+<br>
+<br>
 # FFB6D
 This is the official source code for the **CVPR2021 Oral** work, **FFB6D: A Full Flow Biderectional Fusion Network for 6D Pose Estimation**. ([Arxiv](https://arxiv.org/abs/2103.02242), [Video_Bilibili](https://www.bilibili.com/video/BV1YU4y1a7Kp?from=search&seid=8306279574921937158), [Video_YouTube](https://www.youtube.com/watch?v=SSi2TnyD6Is))
 
