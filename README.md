@@ -1,4 +1,5 @@
 # Apple-6D-pose-estimation_FFB6D
+This is a modified code of FFB6D to perform 6D Pose Estimation of apple. <br><br>
 FFB6D original code: https://github.com/ethnhe/FFB6D </br>
 FFB6D paper: https://arxiv.org/abs/2103.02242 </br>
 ![000082-color](https://github.com/jwl22/Apple-6D-pose-estimation_FFB6D/assets/96900435/0a32d38b-413a-44d2-9387-17ca7c36a74d)
