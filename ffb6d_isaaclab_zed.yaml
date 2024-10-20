@@ -7,9 +7,6 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=main
   - _openmp_mutex=5.1=1_gnu
-  - _sysroot_linux-64_curr_repodata_hack=3=haa98f57_10
-  - binutils_impl_linux-64=2.40=h5293946_0
-  - binutils_linux-64=2.40.0=hc2dff05_1
   - blas=1.0=mkl
   - brotli-python=1.0.9=py310h6a678d5_8
   - bzip2=1.0.8=h5eee18b_6
@@ -25,16 +22,11 @@ dependencies:
   - ffmpeg=4.3=hf484d3e_0
   - filelock=3.13.1=py310h06a4308_0
   - freetype=2.12.1=h4a9f257_0
-  - gcc_impl_linux-64=11.2.0=h1234567_1
-  - gcc_linux-64=11.2.0=h5c386dc_1
   - gmp=6.2.1=h295c915_3
   - gmpy2=2.1.2=py310heeb90bb_0
   - gnutls=3.6.15=he1e5248_0
-  - gxx_impl_linux-64=11.2.0=h1234567_1
-  - gxx_linux-64=11.2.0=hc2dff05_1
   - intel-openmp=2023.1.0=hdb19cb5_46306
   - jpeg=9e=h5eee18b_3
-  - kernel-headers_linux-64=3.10.0=h57e8cba_10
   - lame=3.100=h7b6447c_0
   - lcms2=2.12=h3be6417_0
   - ld_impl_linux-64=2.40=h12ee557_0
@@ -49,7 +41,6 @@ dependencies:
   - libcusparse=11.7.5.86=0
   - libdeflate=1.17=h5eee18b_1
   - libffi=3.4.4=h6a678d5_1
-  - libgcc-devel_linux-64=11.2.0=h1234567_1
   - libgcc-ng=11.2.0=h1234567_1
   - libgfortran-ng=11.2.0=h00389a5_1
   - libgfortran5=11.2.0=h1234567_1
@@ -61,7 +52,6 @@ dependencies:
   - libnpp=11.8.0.86=0
   - libnvjpeg=11.9.0.86=0
   - libpng=1.6.39=h5eee18b_0
-  - libstdcxx-devel_linux-64=11.2.0=h1234567_1
   - libstdcxx-ng=12.3.0=hc0a3c3a_7
   - libtasn1=4.19.0=h5eee18b_0
   - libtiff=4.5.1=h6a678d5_0
@@ -94,7 +84,6 @@ dependencies:
   - readline=8.2=h5eee18b_0
   - requests=2.32.3=py310h06a4308_0
   - sqlite=3.45.3=h5eee18b_0
-  - sysroot_linux-64=2.17=h57e8cba_10
   - tbb=2021.8.0=hdb19cb5_0
   - tk=8.6.14=h39e8969_0
   - torchaudio=2.4.0=py310_cu118
@@ -176,6 +165,7 @@ dependencies:
       - omni-isaac-lab-tasks==0.10.7
       - omniverse-kit==106.1.0.140981
       - onnx==1.16.1
+      - open3d-python==0.3.0.0
       - opencv-python==4.10.0.84
       - orjson==3.10.7
       - osqp==0.6.7.post3

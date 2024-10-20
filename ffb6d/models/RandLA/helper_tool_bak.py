@@ -287,7 +287,7 @@ class DataProcessing:
     def get_class_weights(dataset_name):
         # pre-calculate the number of points in each category
         num_per_class = []
-        if dataset_name == "S3DIS":
+        if dataset_name is "S3DIS":
             num_per_class = np.array(
                 [
                     3370714,
@@ -306,12 +306,12 @@ class DataProcessing:
                 ],
                 dtype=np.int32,
             )
-        elif dataset_name == "Semantic3D":
+        elif dataset_name is "Semantic3D":
             num_per_class = np.array(
                 [5181602, 5012952, 6830086, 1311528, 10476365, 946982, 334860, 269353],
                 dtype=np.int32,
             )
-        elif dataset_name == "SemanticKITTI":
+        elif dataset_name is "SemanticKITTI":
             num_per_class = np.array(
                 [
                     55437630,
