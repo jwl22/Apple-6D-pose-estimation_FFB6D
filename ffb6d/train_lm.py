@@ -40,78 +40,90 @@ from apex import amp
 from apex.multi_tensor_apply import multi_tensor_applier
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
 parser = argparse.ArgumentParser(description="Arg parser")
 parser.add_argument(
-    "-weight_decay", type=float, default=0,
+    "-weight_decay",
+    type=float,
+    default=0,
     help="L2 regularization coeff [default: 0.0]",
 )
 parser.add_argument(
-    "-lr", type=float, default=1e-2,
-    help="Initial learning rate [default: 1e-2]"
+    "-lr", type=float, default=1e-2, help="Initial learning rate [default: 1e-2]"
 )
 parser.add_argument(
-    "-lr_decay", type=float, default=0.5,
+    "-lr_decay",
+    type=float,
+    default=0.5,
     help="Learning rate decay gamma [default: 0.5]",
 )
 parser.add_argument(
-    "-decay_step", type=float, default=2e5,
+    "-decay_step",
+    type=float,
+    default=2e5,
     help="Learning rate decay step [default: 20]",
 )
 parser.add_argument(
-    "-bn_momentum", type=float, default=0.9,
+    "-bn_momentum",
+    type=float,
+    default=0.9,
     help="Initial batch norm momentum [default: 0.9]",
 )
 parser.add_argument(
-    "-bn_decay", type=float, default=0.5,
+    "-bn_decay",
+    type=float,
+    default=0.5,
     help="Batch norm momentum decay gamma [default: 0.5]",
 )
 parser.add_argument(
-    "-checkpoint", type=str, default=None,
-    help="Checkpoint to start from"
+    "-checkpoint", type=str, default=None, help="Checkpoint to start from"
 )
 parser.add_argument(
     "-epochs", type=int, default=1000, help="Number of epochs to train for"
 )
+parser.add_argument("-eval_net", action="store_true", help="whether is to eval net.")
 parser.add_argument(
-    "-eval_net", action='store_true', help="whether is to eval net."
+    "--cls",
+    type=str,
+    default="ape",
+    help="Target object. (ape, benchvise, cam, can, cat, driller,"
+    + "duck, eggbox, glue, holepuncher, iron, lamp, phone)",
 )
 parser.add_argument(
-    '--cls', type=str, default="ape",
-    help="Target object. (ape, benchvise, cam, can, cat, driller," +
-    "duck, eggbox, glue, holepuncher, iron, lamp, phone)"
-)
-parser.add_argument(
-    '--test_occ', action="store_true", help="To eval occlusion linemod or not."
+    "--test_occ", action="store_true", help="To eval occlusion linemod or not."
 )
 parser.add_argument("-test", action="store_true")
 parser.add_argument("-test_pose", action="store_true")
 parser.add_argument("-test_gt", action="store_true")
 parser.add_argument("-cal_metrics", action="store_true")
 parser.add_argument("-view_dpt", action="store_true")
-parser.add_argument('-debug', action='store_true')
+parser.add_argument("-debug", action="store_true")
 
-parser.add_argument('--local_rank', type=int, default=0)
-parser.add_argument('--gpu_id', type=list, default=[0, 1, 2, 3, 4, 5, 6, 7])
-parser.add_argument('-n', '--nodes', default=1, type=int, metavar='N')
-parser.add_argument('-g', '--gpus', default=8, type=int,
-                    help='number of gpus per node')
-parser.add_argument('-nr', '--nr', default=0, type=int,
-                    help='ranking within the nodes')
-parser.add_argument('--epochs', default=2, type=int,
-                    metavar='N', help='number of total epochs to run')
-parser.add_argument('--gpu', type=str, default="0,1,2,3,4,5,6,7")
-parser.add_argument('--deterministic', action='store_true')
-parser.add_argument('--keep_batchnorm_fp32', default=True)
-parser.add_argument('--opt_level', default="O0", type=str,
-                    help='opt level of apex mix presision trainig.')
+parser.add_argument("--local_rank", type=int, default=0)
+parser.add_argument("--gpu_id", type=list, default=[0, 1, 2, 3, 4, 5, 6, 7])
+parser.add_argument("-n", "--nodes", default=1, type=int, metavar="N")
+parser.add_argument("-g", "--gpus", default=8, type=int, help="number of gpus per node")
+parser.add_argument("-nr", "--nr", default=0, type=int, help="ranking within the nodes")
+parser.add_argument(
+    "--epochs", default=2, type=int, metavar="N", help="number of total epochs to run"
+)
+parser.add_argument("--gpu", type=str, default="0,1,2,3,4,5,6,7")
+parser.add_argument("--deterministic", action="store_true")
+parser.add_argument("--keep_batchnorm_fp32", default=True)
+parser.add_argument(
+    "--opt_level",
+    default="O0",
+    type=str,
+    help="opt level of apex mix presision trainig.",
+)
 args = parser.parse_args()
 
-os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
-config = Config(ds_name='linemod', cls_type=args.cls)
+config = Config(ds_name="linemod", cls_type=args.cls)
 bs_utils = Basic_Utils(config)
 writer = SummaryWriter(log_dir=config.log_traininfo_dir)
 
@@ -120,8 +132,8 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (30000, rlimit[1]))
 
 color_lst = [(0, 0, 0)]
 for i in range(config.n_objects):
-    col_mul = (255 * 255 * 255) // (i+1)
-    color = (col_mul//(255*255), (col_mul//255) % 255, col_mul % 255)
+    col_mul = (255 * 255 * 255) // (i + 1)
+    color = (col_mul // (255 * 255), (col_mul // 255) % 255, col_mul % 255)
     color_lst.append(color)
 
 
@@ -135,14 +147,15 @@ def worker_init_fn(worker_id):
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
-        return param_group['lr']
+        return param_group["lr"]
 
 
 def checkpoint_state(model=None, optimizer=None, best_prec=None, epoch=None, it=None):
     optim_state = optimizer.state_dict() if optimizer is not None else None
     if model is not None:
-        if isinstance(model, torch.nn.DataParallel) or \
-                isinstance(model, torch.nn.parallel.DistributedDataParallel):
+        if isinstance(model, torch.nn.DataParallel) or isinstance(
+            model, torch.nn.parallel.DistributedDataParallel
+        ):
             model_state = model.module.state_dict()
         else:
             model_state = model.state_dict()
@@ -160,8 +173,11 @@ def checkpoint_state(model=None, optimizer=None, best_prec=None, epoch=None, it=
 
 
 def save_checkpoint(
-        state, is_best, filename="checkpoint", bestname="model_best",
-        bestname_pure='ffb6d_best'
+    state,
+    is_best,
+    filename="checkpoint",
+    bestname="model_best",
+    bestname_pure="ffb6d_best",
 ):
     filename = "{}.pth.tar".format(filename)
     torch.save(state, filename)
@@ -180,8 +196,8 @@ def load_checkpoint(model=None, optimizer=None, filename="checkpoint"):
         it = ck.get("it", 0.0)
         best_prec = ck.get("best_prec", None)
         if model is not None and ck["model_state"] is not None:
-            ck_st = ck['model_state']
-            if 'module' in list(ck_st.keys())[0]:
+            ck_st = ck["model_state"]
+            if "module" in list(ck_st.keys())[0]:
                 tmp_ck_st = {}
                 for k, v in ck_st.items():
                     tmp_ck_st[k.replace("module.", "")] = v
@@ -198,7 +214,7 @@ def load_checkpoint(model=None, optimizer=None, filename="checkpoint"):
         return None
 
 
-def view_labels(rgb_chw, cld_cn, labels, K=config.intrinsic_matrix['linemod']):
+def view_labels(rgb_chw, cld_cn, labels, K=config.intrinsic_matrix["linemod"]):
     rgb_hwc = np.transpose(rgb_chw[0].numpy(), (1, 2, 0)).astype("uint8").copy()
     cld_nc = np.transpose(cld_cn.numpy(), (1, 0)).copy()
     p2ds = bs_utils.project_p3d(cld_nc, 1.0, K).astype(np.int32)
@@ -217,13 +233,21 @@ def view_labels(rgb_chw, cld_cn, labels, K=config.intrinsic_matrix['linemod']):
 
 
 def model_fn_decorator(
-    criterion, criterion_of, test=False,
+    criterion,
+    criterion_of,
+    test=False,
 ):
     teval = TorchEval()
 
     def model_fn(
-        model, data, it=0, epoch=0, is_eval=False, is_test=False, finish_test=False,
-        test_pose=False
+        model,
+        data,
+        it=0,
+        epoch=0,
+        is_eval=False,
+        is_test=False,
+        finish_test=False,
+        test_pose=False,
     ):
         if finish_test:
             teval.cal_lm_add(config.cls_id)
@@ -245,83 +269,106 @@ def model_fn_decorator(
 
             end_points = model(cu_dt)
 
-            labels = cu_dt['labels']
+            labels = cu_dt["labels"]
             loss_rgbd_seg = criterion(
-                end_points['pred_rgbd_segs'], labels.view(-1)
+                end_points["pred_rgbd_segs"], labels.view(-1)
             ).sum()
             loss_kp_of = criterion_of(
-                end_points['pred_kp_ofs'], cu_dt['kp_targ_ofst'], labels
+                end_points["pred_kp_ofs"], cu_dt["kp_targ_ofst"], labels
             ).sum()
             loss_ctr_of = criterion_of(
-                end_points['pred_ctr_ofs'], cu_dt['ctr_targ_ofst'], labels
+                end_points["pred_ctr_ofs"], cu_dt["ctr_targ_ofst"], labels
             ).sum()
 
             loss_lst = [
-                (loss_rgbd_seg, 2.0), (loss_kp_of, 1.0), (loss_ctr_of, 1.0),
+                (loss_rgbd_seg, 2.0),
+                (loss_kp_of, 1.0),
+                (loss_ctr_of, 1.0),
             ]
             loss = sum([ls * w for ls, w in loss_lst])
 
-            _, cls_rgbd = torch.max(end_points['pred_rgbd_segs'], 1)
+            _, cls_rgbd = torch.max(end_points["pred_rgbd_segs"], 1)
             acc_rgbd = (cls_rgbd == labels).float().sum() / labels.numel()
 
             if args.debug:
                 show_lb = view_labels(
-                    data['rgb'], data['cld_rgb_nrm'][0, :3, :], cls_rgbd
+                    data["rgb"], data["cld_rgb_nrm"][0, :3, :], cls_rgbd
                 )
                 show_gt_lb = view_labels(
-                    data['rgb'], data['cld_rgb_nrm'][0, :3, :],
-                    cu_dt['labels'].squeeze()
+                    data["rgb"],
+                    data["cld_rgb_nrm"][0, :3, :],
+                    cu_dt["labels"].squeeze(),
                 )
                 imshow("pred_lb", show_lb)
-                imshow('gt_lb', show_gt_lb)
+                imshow("gt_lb", show_gt_lb)
                 waitKey(0)
 
             loss_dict = {
-                'loss_rgbd_seg': loss_rgbd_seg.item(),
-                'loss_kp_of': loss_kp_of.item(),
-                'loss_ctr_of': loss_ctr_of.item(),
-                'loss_all': loss.item(),
-                'loss_target': loss.item()
+                "loss_rgbd_seg": loss_rgbd_seg.item(),
+                "loss_kp_of": loss_kp_of.item(),
+                "loss_ctr_of": loss_ctr_of.item(),
+                "loss_all": loss.item(),
+                "loss_target": loss.item(),
             }
             acc_dict = {
-                'acc_rgbd': acc_rgbd.item(),
+                "acc_rgbd": acc_rgbd.item(),
             }
             info_dict = loss_dict.copy()
             info_dict.update(acc_dict)
 
             if not is_eval:
                 if args.local_rank == 0:
-                    writer.add_scalars('loss', loss_dict, it)
-                    writer.add_scalars('train_acc', acc_dict, it)
+                    writer.add_scalars("loss", loss_dict, it)
+                    writer.add_scalars("train_acc", acc_dict, it)
             if is_test and test_pose:
-                cld = cu_dt['cld_rgb_nrm'][:, :3, :].permute(0, 2, 1).contiguous()
+                cld = cu_dt["cld_rgb_nrm"][:, :3, :].permute(0, 2, 1).contiguous()
 
                 if not args.test_gt:
                     # eval pose from point cloud prediction.
                     teval.eval_pose_parallel(
-                        cld, cu_dt['rgb'], cls_rgbd, end_points['pred_ctr_ofs'],
-                        cu_dt['ctr_targ_ofst'], labels, epoch, cu_dt['cls_ids'],
-                        cu_dt['RTs'], end_points['pred_kp_ofs'],
-                        cu_dt['kp_3ds'], cu_dt['ctr_3ds'],
-                        ds='linemod', obj_id=config.cls_id,
-                        min_cnt=1, use_ctr_clus_flter=True, use_ctr=True,
+                        cld,
+                        cu_dt["rgb"],
+                        cls_rgbd,
+                        end_points["pred_ctr_ofs"],
+                        cu_dt["ctr_targ_ofst"],
+                        labels,
+                        epoch,
+                        cu_dt["cls_ids"],
+                        cu_dt["RTs"],
+                        end_points["pred_kp_ofs"],
+                        cu_dt["kp_3ds"],
+                        cu_dt["ctr_3ds"],
+                        ds="linemod",
+                        obj_id=config.cls_id,
+                        min_cnt=1,
+                        use_ctr_clus_flter=True,
+                        use_ctr=True,
                     )
                 else:
                     # test GT labels, keypoint and center point offset
-                    gt_ctr_ofs = cu_dt['ctr_targ_ofst'].unsqueeze(2).permute(0, 2, 1, 3)
-                    gt_kp_ofs = cu_dt['kp_targ_ofst'].permute(0, 2, 1, 3)
+                    gt_ctr_ofs = cu_dt["ctr_targ_ofst"].unsqueeze(2).permute(0, 2, 1, 3)
+                    gt_kp_ofs = cu_dt["kp_targ_ofst"].permute(0, 2, 1, 3)
                     teval.eval_pose_parallel(
-                        cld, cu_dt['rgb'], labels, gt_ctr_ofs,
-                        cu_dt['ctr_targ_ofst'], labels, epoch, cu_dt['cls_ids'],
-                        cu_dt['RTs'], gt_kp_ofs,
-                        cu_dt['kp_3ds'], cu_dt['ctr_3ds'],
-                        ds='linemod', obj_id=config.cls_id,
-                        min_cnt=1, use_ctr_clus_flter=True, use_ctr=True
+                        cld,
+                        cu_dt["rgb"],
+                        labels,
+                        gt_ctr_ofs,
+                        cu_dt["ctr_targ_ofst"],
+                        labels,
+                        epoch,
+                        cu_dt["cls_ids"],
+                        cu_dt["RTs"],
+                        gt_kp_ofs,
+                        cu_dt["kp_3ds"],
+                        cu_dt["ctr_3ds"],
+                        ds="linemod",
+                        obj_id=config.cls_id,
+                        min_cnt=1,
+                        use_ctr_clus_flter=True,
+                        use_ctr=True,
                     )
 
-        return (
-            end_points, loss, info_dict
-        )
+        return (end_points, loss, info_dict)
 
     return model_fn
 
@@ -358,7 +405,13 @@ class Trainer(object):
         bnm_scheduler=None,
         viz=None,
     ):
-        self.model, self.model_fn, self.optimizer, self.lr_scheduler, self.bnm_scheduler = (
+        (
+            self.model,
+            self.model_fn,
+            self.optimizer,
+            self.lr_scheduler,
+            self.bnm_scheduler,
+        ) = (
             model,
             model_fn,
             optimizer,
@@ -377,18 +430,16 @@ class Trainer(object):
         eval_dict = {}
         total_loss = 0.0
         count = 1
-        for i, data in tqdm.tqdm(
-            enumerate(d_loader), leave=False, desc="val"
-        ):
+        for i, data in tqdm.tqdm(enumerate(d_loader), leave=False, desc="val"):
             count += 1
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=False)
 
             _, loss, eval_res = self.model_fn(
                 self.model, data, is_eval=True, is_test=is_test, test_pose=test_pose
             )
 
-            if 'loss_target' in eval_res.keys():
-                total_loss += eval_res['loss_target']
+            if "loss_target" in eval_res.keys():
+                total_loss += eval_res["loss_target"]
             else:
                 total_loss += loss.item()
             for k, v in eval_res.items():
@@ -398,9 +449,9 @@ class Trainer(object):
         mean_eval_dict = {}
         acc_dict = {}
         for k, v in eval_dict.items():
-            per = 100 if 'acc' in k else 1
+            per = 100 if "acc" in k else 1
             mean_eval_dict[k] = np.array(v).mean() * per
-            if 'acc' in k:
+            if "acc" in k:
                 acc_dict[k] = v
         for k, v in mean_eval_dict.items():
             print(k, v)
@@ -408,18 +459,22 @@ class Trainer(object):
         if is_test:
             if test_pose:
                 self.model_fn(
-                    self.model, data, is_eval=True, is_test=is_test, finish_test=True,
-                    test_pose=test_pose
+                    self.model,
+                    data,
+                    is_eval=True,
+                    is_test=is_test,
+                    finish_test=True,
+                    test_pose=test_pose,
                 )
-            seg_res_fn = 'seg_res'
+            seg_res_fn = "seg_res"
             for k, v in acc_dict.items():
                 print(seg_res_fn)
-                seg_res_fn += '_%s%.2f' % (k, v)
-            with open(os.path.join(config.log_eval_dir, seg_res_fn), 'w') as of:
+                seg_res_fn += "_%s%.2f" % (k, v)
+            with open(os.path.join(config.log_eval_dir, seg_res_fn), "w") as of:
                 for k, v in acc_dict.items():
                     print(k, v, file=of)
         if args.local_rank == 0:
-            writer.add_scalars('val_acc', acc_dict, it)
+            writer.add_scalars("val_acc", acc_dict, it)
 
         return total_loss / count, eval_dict
 
@@ -469,9 +524,9 @@ class Trainer(object):
         it = start_it
         _, eval_frequency = is_to_eval(0, it)
 
-        with tqdm.tqdm(range(config.n_total_epoch), desc="%s_epochs" % args.cls) as tbar, tqdm.tqdm(
-            total=eval_frequency, leave=False, desc="train"
-        ) as pbar:
+        with tqdm.tqdm(
+            range(config.n_total_epoch), desc="%s_epochs" % args.cls
+        ) as tbar, tqdm.tqdm(total=eval_frequency, leave=False, desc="train") as pbar:
 
             for epoch in tbar:
                 if epoch > config.n_total_epoch:
@@ -486,14 +541,14 @@ class Trainer(object):
                 for batch in train_loader:
                     self.model.train()
 
-                    self.optimizer.zero_grad()
+                    self.optimizer.zero_grad(set_to_none=False)
                     _, loss, res = self.model_fn(self.model, batch, it=it)
 
                     with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                         scaled_loss.backward()
                     lr = get_lr(self.optimizer)
                     if args.local_rank == 0:
-                        writer.add_scalar('lr/lr', lr, it)
+                        writer.add_scalar("lr/lr", lr, it)
 
                     self.optimizer.step()
 
@@ -529,16 +584,14 @@ class Trainer(object):
                                     ),
                                     is_best,
                                     filename=self.checkpoint_name,
-                                    bestname=self.best_name+'_%.4f' % val_loss,
-                                    bestname_pure=self.best_name
+                                    bestname=self.best_name + "_%.4f" % val_loss,
+                                    bestname_pure=self.best_name,
                                 )
                                 info_p = self.checkpoint_name.replace(
-                                    '.pth.tar', '_epoch.txt'
+                                    ".pth.tar", "_epoch.txt"
                                 )
                                 os.system(
-                                    'echo {} {} >> {}'.format(
-                                        it, val_loss, info_p
-                                    )
+                                    "echo {} {} >> {}".format(it, val_loss, info_p)
                                 )
 
                         pbar = tqdm.tqdm(
@@ -562,47 +615,62 @@ def train():
         torch.set_printoptions(precision=10)
     torch.cuda.set_device(args.local_rank)
     torch.distributed.init_process_group(
-        backend='nccl',
-        init_method='env://',
+        backend="nccl",
+        init_method="env://",
     )
     torch.manual_seed(0)
 
     if not args.eval_net:
-        train_ds = dataset_desc.Dataset('train', cls_type=args.cls)
+        train_ds = dataset_desc.Dataset("train", cls_type=args.cls)
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_ds)
         train_loader = torch.utils.data.DataLoader(
-            train_ds, batch_size=config.mini_batch_size, shuffle=False,
-            drop_last=True, num_workers=4, sampler=train_sampler, pin_memory=True
+            train_ds,
+            batch_size=config.mini_batch_size,
+            shuffle=False,
+            drop_last=True,
+            num_workers=4,
+            sampler=train_sampler,
+            pin_memory=True,
         )
 
-        val_ds = dataset_desc.Dataset('test', cls_type=args.cls)
+        val_ds = dataset_desc.Dataset("test", cls_type=args.cls)
         val_sampler = torch.utils.data.distributed.DistributedSampler(val_ds)
         val_loader = torch.utils.data.DataLoader(
-            val_ds, batch_size=config.val_mini_batch_size, shuffle=False,
-            drop_last=False, num_workers=4, sampler=val_sampler
+            val_ds,
+            batch_size=config.val_mini_batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=4,
+            sampler=val_sampler,
         )
     else:
-        test_ds = dataset_desc.Dataset('test', cls_type=args.cls)
+        test_ds = dataset_desc.Dataset("test", cls_type=args.cls)
         test_loader = torch.utils.data.DataLoader(
-            test_ds, batch_size=config.test_mini_batch_size, shuffle=False,
-            num_workers=10
+            test_ds,
+            batch_size=config.test_mini_batch_size,
+            shuffle=False,
+            num_workers=10,
         )
 
     rndla_cfg = ConfigRandLA
     model = FFB6D(
-        n_classes=config.n_objects, n_pts=config.n_sample_points, rndla_cfg=rndla_cfg,
-        n_kps=config.n_keypoints
+        n_classes=config.n_objects,
+        n_pts=config.n_sample_points,
+        rndla_cfg=rndla_cfg,
+        n_kps=config.n_keypoints,
     )
     model = convert_syncbn_model(model)
-    device = torch.device('cuda:{}'.format(args.local_rank))
-    print('local_rank:', args.local_rank)
+    device = torch.device("cuda:{}".format(args.local_rank))
+    print("local_rank:", args.local_rank)
     model.to(device)
     optimizer = optim.Adam(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
     opt_level = args.opt_level
     model, optimizer = amp.initialize(
-        model, optimizer, opt_level=opt_level,
+        model,
+        optimizer,
+        opt_level=opt_level,
     )
 
     # default value
@@ -627,16 +695,26 @@ def train():
 
     if not args.eval_net:
         model = torch.nn.parallel.DistributedDataParallel(
-            model, device_ids=[args.local_rank], output_device=args.local_rank,
-            find_unused_parameters=True
+            model,
+            device_ids=[args.local_rank],
+            output_device=args.local_rank,
+            find_unused_parameters=True,
         )
         clr_div = 2
         lr_scheduler = CyclicLR(
-            optimizer, base_lr=1e-5, max_lr=1e-3,
+            optimizer,
+            base_lr=1e-5,
+            max_lr=1e-3,
             cycle_momentum=False,
-            step_size_up=config.n_total_epoch * train_ds.minibatch_per_epoch // clr_div // args.gpus,
-            step_size_down=config.n_total_epoch * train_ds.minibatch_per_epoch // clr_div // args.gpus,
-            mode='triangular'
+            step_size_up=config.n_total_epoch
+            * train_ds.minibatch_per_epoch
+            // clr_div
+            // args.gpus,
+            step_size_down=config.n_total_epoch
+            * train_ds.minibatch_per_epoch
+            // clr_div
+            // args.gpus,
+            mode="triangular",
         )
     else:
         lr_scheduler = None
@@ -654,12 +732,14 @@ def train():
 
     if args.eval_net:
         model_fn = model_fn_decorator(
-            FocalLoss(gamma=2), OFLoss(),
+            FocalLoss(gamma=2),
+            OFLoss(),
             args.test,
         )
     else:
         model_fn = model_fn_decorator(
-            FocalLoss(gamma=2).to(device), OFLoss().to(device),
+            FocalLoss(gamma=2).to(device),
+            OFLoss().to(device),
             args.test,
         )
 
@@ -681,13 +761,18 @@ def train():
             test_loader, is_test=True, test_pose=args.test_pose
         )
         end = time.time()
-        print("\nUse time: ", end - start, 's')
+        print("\nUse time: ", end - start, "s")
     else:
         trainer.train(
-            it, start_epoch, config.n_total_epoch, train_loader, None,
-            val_loader, best_loss=best_loss,
+            it,
+            start_epoch,
+            config.n_total_epoch,
+            train_loader,
+            None,
+            val_loader,
+            best_loss=best_loss,
             tot_iter=config.n_total_epoch * train_ds.minibatch_per_epoch // args.gpus,
-            clr_div=clr_div
+            clr_div=clr_div,
         )
 
         if start_epoch == config.n_total_epoch:

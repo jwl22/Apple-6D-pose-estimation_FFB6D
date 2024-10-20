@@ -39,7 +39,6 @@ from apex.parallel import convert_syncbn_model
 from apex import amp
 from apex.multi_tensor_apply import multi_tensor_applier
 
-
 config = Config()
 bs_utils = Basic_Utils(config)
 writer = SummaryWriter(log_dir=config.log_traininfo_dir)
@@ -80,7 +79,7 @@ parser.add_argument(
     help="Batch norm momentum decay gamma [default: 0.5]",
 )
 parser.add_argument(
-    "-checkpoint", type=str, default=None,
+    "-checkpoint", type=str, default="FFB6D_best.pth.tar",
     help="Checkpoint to start from"
 )
 parser.add_argument(
@@ -97,13 +96,13 @@ parser.add_argument("-view_dpt", action="store_true")
 parser.add_argument('-debug', action='store_true')
 
 parser.add_argument('--local_rank', type=int, default=0)
-parser.add_argument('--gpu_id', type=list, default=[0, 1, 2, 3, 4, 5, 6, 7])
+parser.add_argument('--gpu_id', type=list, default=[0, 1, 2])
 parser.add_argument('-n', '--nodes', default=1, type=int, metavar='N')
-parser.add_argument('-g', '--gpus', default=8, type=int,
+parser.add_argument('-g', '--gpus', default=3, type=int,
                     help='number of gpus per node')
 parser.add_argument('-nr', '--nr', default=0, type=int,
                     help='ranking within the nodes')
-parser.add_argument('--gpu', type=str, default="0,1,2,3,4,5,6,7")
+parser.add_argument('--gpu', type=str, default="0,1,2")
 parser.add_argument('--deterministic', action='store_true')
 parser.add_argument('--keep_batchnorm_fp32', default=True)
 parser.add_argument('--opt_level', default="O0", type=str,
@@ -265,9 +264,9 @@ def model_fn_decorator(
             info_dict.update(acc_dict)
 
             # if not is_eval:
-                # if args.local_rank == 0:
-                    # writer.add_scalars('loss', loss_dict, it)
-                    # writer.add_scalars('train_acc', acc_dict, it)
+            #     if args.local_rank == 0:
+            #         writer.add_scalars('loss', loss_dict, it)
+            #         writer.add_scalars('train_acc', acc_dict, it)
             if is_test and test_pose:
                 cld = cu_dt['cld_rgb_nrm'][:, :3, :].permute(0, 2, 1).contiguous()
 

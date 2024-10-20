@@ -13,21 +13,26 @@ from utils.ip_basic.ip_basic import depth_map_utils_ycb as depth_map_utils
 
 
 intrinsic_matrix = {
-    'linemod': np.array([[700.150000000000,	0,	634.970000000000],
-                        [0,	700.390000000000,	362.986000000000],
-                        [0., 0., 1.0]], np.float32),
-    'blender': np.array([[700.150000000000,	0,	634.970000000000],
-                        [0,	700.390000000000,	362.986000000000],
-                        [0., 0., 1.0]], np.float32),
-    'pascal': np.array([[700.150000000000,	0,	634.970000000000],
-                        [0,	700.390000000000,	362.986000000000],
-                        [0., 0., 1.0]], np.float32),
-    'ycb_K1': np.array([[700.150000000000,	0,	634.970000000000],
-                        [0,	700.390000000000,	362.986000000000],
-                        [0., 0., 1.0]], np.float32),
-    'ycb_K2': np.array([[700.150000000000,	0,	634.970000000000],
-                        [0,	700.390000000000,	362.986000000000],
-                        [0., 0., 1.0]], np.float32),
+    'linemod': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+    'blender': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+    'pascal': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+    'ycb_K1': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+    'ycb_K2': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
 }
 
 
@@ -160,8 +165,8 @@ class PoseTransformer(object):
 class Basic_Utils():
 
     def __init__(self, config):
-        self.xmap = np.array([[j for i in range(1280)] for j in range(720)])
-        self.ymap = np.array([[i for i in range(1280)] for j in range(720)])
+        self.xmap = np.array([[j for i in range(672)] for j in range(376)])
+        self.ymap = np.array([[i for i in range(672)] for j in range(376)])
         self.config = config
         if config.dataset_name == "ycb":
             self.ycb_cls_lst = config.ycb_cls_lst
@@ -359,7 +364,7 @@ class Basic_Utils():
         show_labels = show_labels.reshape(h, w, 3)
         return show_labels
 
-    def get_label_color(self, cls_id, n_obj=6, mode=0):
+    def get_label_color(self, cls_id, n_obj=2, mode=0):
         if mode == 0:
             cls_color = [
                 255, 255, 255,  # 0
@@ -411,25 +416,25 @@ class Basic_Utils():
         return cld, choose
 
     def get_normal_map(self, nrm, choose):
-        nrm_map = np.zeros((720, 1280, 3), dtype=np.uint8)
+        nrm_map = np.zeros((376, 672, 3), dtype=np.uint8)
         nrm = nrm[:, :3]
         nrm[np.isnan(nrm)] = 0.0
         nrm[np.isinf(nrm)] = 0.0
         nrm_color = ((nrm + 1.0) * 127).astype(np.uint8)
         nrm_map = nrm_map.reshape(-1, 3)
         nrm_map[choose, :] = nrm_color
-        nrm_map = nrm_map.reshape((720, 1280, 3))
+        nrm_map = nrm_map.reshape((376, 672, 3))
         return nrm_map
 
     def get_rgb_pts_map(self, pts, choose):
-        pts_map = np.zeros((720, 1280, 3), dtype=np.uint8)
+        pts_map = np.zeros((376, 672, 3), dtype=np.uint8)
         pts = pts[:, :3]
         pts[np.isnan(pts)] = 0.0
         pts[np.isinf(pts)] = 0.0
         pts_color = pts.astype(np.uint8)
         pts_map = pts_map.reshape(-1, 3)
         pts_map[choose, :] = pts_color
-        pts_map = pts_map.reshape((720, 1280, 3))
+        pts_map = pts_map.reshape((376, 672, 3))
         return pts_map
 
     def fill_missing(

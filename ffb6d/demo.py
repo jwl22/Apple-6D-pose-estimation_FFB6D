@@ -20,6 +20,7 @@ from datasets.ycb.ycb_dataset import Dataset as YCB_Dataset
 from datasets.linemod.linemod_dataset import Dataset as LM_Dataset
 from utils.pvn3d_eval_utils_kpls import cal_frame_poses, cal_frame_poses_lm
 from utils.basic_utils import Basic_Utils
+
 try:
     from neupeak.utils.webcv2 import imshow, waitKey
 except ImportError:
@@ -27,21 +28,22 @@ except ImportError:
 
 
 parser = argparse.ArgumentParser(description="Arg parser")
+tst_mdl = "train_log/ycb/checkpoints/FFB6D_best.pth.tar"
+parser.add_argument("-checkpoint", type=str, default=tst_mdl, help="Checkpoint to eval")
 parser.add_argument(
-    "-checkpoint", type=str, default=None, help="Checkpoint to eval"
+    "-dataset",
+    type=str,
+    default="ycb",
+    help="Target dataset, ycb or linemod. (linemod as default).",
 )
 parser.add_argument(
-    "-dataset", type=str, default="linemod",
-    help="Target dataset, ycb or linemod. (linemod as default)."
+    "-cls",
+    type=str,
+    default="ape",
+    help="Target object to eval in LineMOD dataset. (ape, benchvise, cam, can,"
+    + "cat, driller, duck, eggbox, glue, holepuncher, iron, lamp, phone)",
 )
-parser.add_argument(
-    "-cls", type=str, default="ape",
-    help="Target object to eval in LineMOD dataset. (ape, benchvise, cam, can," +
-    "cat, driller, duck, eggbox, glue, holepuncher, iron, lamp, phone)" 
-)
-parser.add_argument(
-    "-show", action='store_true', help="View from imshow or not."
-)
+parser.add_argument("-show", action="store_true", help="View from imshow or not.")
 args = parser.parse_args()
 
 if args.dataset == "ycb":
@@ -53,7 +55,7 @@ bs_utils = Basic_Utils(config)
 
 def ensure_fd(fd):
     if not os.path.exists(fd):
-        os.system('mkdir -p {}'.format(fd))
+        os.system("mkdir -p {}".format(fd))
 
 
 def load_checkpoint(model=None, optimizer=None, filename="checkpoint"):
@@ -69,8 +71,8 @@ def load_checkpoint(model=None, optimizer=None, filename="checkpoint"):
     it = checkpoint.get("it", 0.0)
     best_prec = checkpoint.get("best_prec", None)
     if model is not None and checkpoint["model_state"] is not None:
-        ck_st = checkpoint['model_state']
-        if 'module' in list(ck_st.keys())[0]:
+        ck_st = checkpoint["model_state"]
+        if "module" in list(ck_st.keys())[0]:
             tmp_ck_st = {}
             for k, v in ck_st.items():
                 tmp_ck_st[k.replace("module.", "")] = v
@@ -97,27 +99,39 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
             elif data[key].dtype in [torch.int32, torch.int16]:
                 cu_dt[key] = data[key].long().cuda()
         end_points = model(cu_dt)
-        _, classes_rgbd = torch.max(end_points['pred_rgbd_segs'], 1)
+        _, classes_rgbd = torch.max(end_points["pred_rgbd_segs"], 1)
 
-        pcld = cu_dt['cld_rgb_nrm'][:, :3, :].permute(0, 2, 1).contiguous()
+        pcld = cu_dt["cld_rgb_nrm"][:, :3, :].permute(0, 2, 1).contiguous()
         if args.dataset == "ycb":
             pred_cls_ids, pred_pose_lst, _ = cal_frame_poses(
-                pcld[0], classes_rgbd[0], end_points['pred_ctr_ofs'][0],
-                end_points['pred_kp_ofs'][0], True, config.n_objects, True,
-                None, None
+                pcld[0],
+                classes_rgbd[0],
+                end_points["pred_ctr_ofs"][0],
+                end_points["pred_kp_ofs"][0],
+                True,
+                config.n_objects,
+                True,
+                None,
+                None,
             )
         else:
             pred_pose_lst = cal_frame_poses_lm(
-                pcld[0], classes_rgbd[0], end_points['pred_ctr_ofs'][0],
-                end_points['pred_kp_ofs'][0], True, config.n_objects, False, obj_id
+                pcld[0],
+                classes_rgbd[0],
+                end_points["pred_ctr_ofs"][0],
+                end_points["pred_kp_ofs"][0],
+                True,
+                config.n_objects,
+                False,
+                obj_id,
             )
             pred_cls_ids = np.array([[1]])
 
-        np_rgb = cu_dt['rgb'].cpu().numpy().astype("uint8")[0].transpose(1, 2, 0).copy()
+        np_rgb = cu_dt["rgb"].cpu().numpy().astype("uint8")[0].transpose(1, 2, 0).copy()
         if args.dataset == "ycb":
             np_rgb = np_rgb[:, :, ::-1].copy()
         ori_rgb = np_rgb.copy()
-        for cls_id in cu_dt['cls_ids'][0].cpu().numpy():
+        for cls_id in cu_dt["cls_ids"][0].cpu().numpy():
             idx = np.where(pred_cls_ids == cls_id)[0]
             if len(idx) == 0:
                 continue
@@ -136,7 +150,7 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
         vis_dir = os.path.join(config.log_eval_dir, "pose_vis")
         ensure_fd(vis_dir)
         f_pth = os.path.join(vis_dir, "{}.jpg".format(epoch))
-        if args.dataset == 'ycb':
+        if args.dataset == "ycb":
             bgr = np_rgb
             ori_bgr = ori_rgb
         else:
@@ -153,32 +167,38 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
 
 def main():
     if args.dataset == "ycb":
-        test_ds = YCB_Dataset('test')
+        test_ds = YCB_Dataset("test")
+
+        # frame = camera()
+        # di, ri = frame
+
+        # test_ds.get_item(di, ri)
+
         obj_id = -1
     else:
-        test_ds = LM_Dataset('test', cls_type=args.cls)
+        test_ds = LM_Dataset("test", cls_type=args.cls)
         obj_id = config.lm_obj_dict[args.cls]
+
     test_loader = torch.utils.data.DataLoader(
-        test_ds, batch_size=config.test_mini_batch_size, shuffle=False,
-        num_workers=20
+        test_ds, batch_size=config.test_mini_batch_size, shuffle=False, num_workers=20
     )
 
     rndla_cfg = ConfigRandLA
     model = FFB6D(
-        n_classes=config.n_objects, n_pts=config.n_sample_points, rndla_cfg=rndla_cfg,
-        n_kps=config.n_keypoints
+        n_classes=config.n_objects,
+        n_pts=config.n_sample_points,
+        rndla_cfg=rndla_cfg,
+        n_kps=config.n_keypoints,
     )
     model.cuda()
 
     # load status from checkpoint
     if args.checkpoint is not None:
-        load_checkpoint(
-            model, None, filename=args.checkpoint[:-8]
-        )
+        load_checkpoint(model, None, filename=args.checkpoint[:-8])
 
-    for i, data in tqdm.tqdm(
-        enumerate(test_loader), leave=False, desc="val"
-    ):
+    for i, data in tqdm.tqdm(enumerate(test_loader), leave=False, desc="val"):
+        cv2.imshow("Result", data["rgb"][0].numpy().transpose(1, 2, 0))
+        cv2.waitKey(0)
         cal_view_pred_pose(model, data, epoch=i, obj_id=obj_id)
 
 

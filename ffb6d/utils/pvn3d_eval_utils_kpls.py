@@ -500,6 +500,8 @@ class TorchEval():
                 )
 
     def merge_lst(self, targ, src):
+        print(targ)
+        print(src)
         for i in range(len(targ)):
             targ[i] += src[i]
         return targ

@@ -12,8 +12,8 @@ def ensure_fd(fd):
 class ConfigRandLA:
     k_n = 16  # KNN
     num_layers = 4  # Number of layers
-    num_points = 720 * 1280 // 24  # Number of input points
-    num_classes = 6  # Number of valid classes
+    num_points = 376 * 672 // 24  # Number of input points
+    num_classes = 2  # Number of valid classes
     sub_grid_size = 0.06  # preprocess_parameter
 
     batch_size = 3  # batch_size during training
@@ -53,12 +53,12 @@ class Config:
         self.log_traininfo_dir = os.path.join(self.log_dir, 'train_info', self.cls_type)
         ensure_fd(self.log_traininfo_dir)
 
-        self.n_total_epoch = 25
-        self.mini_batch_size = 2
-        self.val_mini_batch_size = 2
+        self.n_total_epoch = 500
+        self.mini_batch_size = 12
+        self.val_mini_batch_size = 12
         self.test_mini_batch_size = 1
 
-        self.n_sample_points = 720 * 1280 // 24  # Number of input points
+        self.n_sample_points = 376 * 672 // 24  # Number of input points
         self.n_keypoints = 8
         self.n_min_points = 400
 
@@ -66,7 +66,7 @@ class Config:
 
         self.preprocessed_testset_pth = ''
         if self.dataset_name == 'ycb':
-            self.n_objects = 5 + 1  # 21 objects + background
+            self.n_objects = 1 + 1  # 21 objects + background
             self.n_classes = self.n_objects
             self.use_orbfps = True
             self.kp_orbfps_dir = 'datasets/ycb/ycb_kps/'
@@ -91,9 +91,10 @@ class Config:
                     self.exp_dir, 'datasets/ycb/dataset_config/radius.txt'
                 )
             )
-            self.ycb_r_lst = list(np.loadtxt(ycb_r_lst_p))
+            # self.ycb_r_lst = list(np.loadtxt(ycb_r_lst_p))
+            self.ycb_r_lst = [np.ndarray.tolist(np.loadtxt(ycb_r_lst_p))]
             self.ycb_cls_lst = self.read_lines(self.ycb_cls_lst_p)
-            self.ycb_sym_cls_ids = [1,2,3,4,5]
+            self.ycb_sym_cls_ids = [1]
         else:  # linemod
             self.n_objects = 1 + 1  # 1 object + background
             self.n_classes = self.n_objects
@@ -141,18 +142,22 @@ class Config:
             self.val_nid_ptn = "/data/6D_Pose_Data/datasets/LINEMOD/pose_nori_lists/{}_real_val.nori.list"
 
         self.intrinsic_matrix = {
-            'linemod': np.array([[700.150000000000,	0,	634.970000000000],
-                                [0,	700.390000000000,	362.986000000000],
-                                [0., 0., 1.0]], np.float32),
-            'blender': np.array([[700.150000000000,	0,	634.970000000000],
-                                [0,	700.390000000000,	362.986000000000],
-                                [0., 0., 1.0]], np.float32),
-            'ycb_K1': np.array([[700.150000000000,	0,	634.970000000000],
-                                [0,	700.390000000000,	362.986000000000],
-                                [0., 0., 1.0]], np.float32),
-            'ycb_K2': np.array([[700.150000000000,	0,	634.970000000000],
-                                [0,	700.390000000000,	362.986000000000],
-                                [0., 0., 1.0]], np.float32),
+            'linemod': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+            'blender': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+            'ycb_K1': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
+            'ycb_K2': np.array(
+                [[350.0750, 0, 332.9850], [0, 350.1950, 188.9930], [0, 0, 1]],
+                np.float32,
+            ),
         }
 
     def read_lines(self, p):

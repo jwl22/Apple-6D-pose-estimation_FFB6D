@@ -11,6 +11,7 @@ import pickle as pkl
 from utils.basic_utils import Basic_Utils
 import scipy.io as scio
 import scipy.misc
+
 try:
     from neupeak.utils.webcv2 import imshow, waitKey
 except:
@@ -19,45 +20,47 @@ import normalSpeed
 from models.RandLA.helper_tool import DataProcessing as DP
 
 
-config = Config(ds_name='ycb')
+config = Config(ds_name="ycb")
 bs_utils = Basic_Utils(config)
 
 
-class Dataset():
+class Dataset:
 
     def __init__(self, dataset_name, DEBUG=False):
         self.dataset_name = dataset_name
         self.debug = DEBUG
-        self.xmap = np.array([[j for i in range(1280)] for j in range(720)])
-        self.ymap = np.array([[i for i in range(1280)] for j in range(720)])
+        self.xmap = np.array([[j for i in range(672)] for j in range(376)])
+        self.ymap = np.array([[i for i in range(672)] for j in range(376)])
         self.diameters = {}
         self.trancolor = transforms.ColorJitter(0.2, 0.2, 0.2, 0.05)
-        self.norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.224])
+        self.norm = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.224]
+        )
         self.cls_lst = bs_utils.read_lines(config.ycb_cls_lst_p)
         self.obj_dict = {}
         for cls_id, cls in enumerate(self.cls_lst, start=1):
             self.obj_dict[cls] = cls_id
         self.rng = np.random
-        if dataset_name == 'train':
+        if dataset_name == "train":
             self.add_noise = True
-            self.path = 'datasets/ycb/dataset_config/train_data_list.txt'
+            self.path = "datasets/ycb/dataset_config/train_data_list.txt"
             self.all_lst = bs_utils.read_lines(self.path)
             self.minibatch_per_epoch = len(self.all_lst) // config.mini_batch_size
             self.real_lst = []
             self.syn_lst = []
             for item in self.all_lst:
-                if item[:5] == 'data/':
+                if item[:5] == "data/":
                     self.real_lst.append(item)
                 else:
                     self.syn_lst.append(item)
         else:
             self.pp_data = None
             self.add_noise = False
-            self.path = 'datasets/ycb/dataset_config/test_data_list.txt'
+            self.path = "datasets/ycb/dataset_config/test_data_list.txt"
             self.all_lst = bs_utils.read_lines(self.path)
         print("{}_dataset_size: ".format(dataset_name), len(self.all_lst))
         self.root = config.ycb_root
-        self.sym_cls_ids = [1,2,3,4,5]
+        self.sym_cls_ids = [1]
 
     def real_syn_gen(self):
         if self.rng.rand() > 0.8:
@@ -77,12 +80,12 @@ class Dataset():
         return item
 
     def rand_range(self, rng, lo, hi):
-        return rng.rand()*(hi-lo)+lo
+        return rng.rand() * (hi - lo) + lo
 
     def gaussian_noise(self, rng, img, sigma):
         """add gaussian noise of given sigma to image"""
         img = img + rng.randn(*img.shape) * sigma
-        img = np.clip(img, 0, 255).astype('uint8')
+        img = np.clip(img, 0, 255).astype("uint8")
         return img
 
     def linear_motion_blur(self, img, angle, length):
@@ -115,7 +118,7 @@ class Dataset():
             hsv_img[:, :, 2] = np.clip(hsv_img[:, :, 2], 0, 255)
             img = cv2.cvtColor(hsv_img.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
-        if rng.rand() > .8:  # sharpen
+        if rng.rand() > 0.8:  # sharpen
             kernel = -np.ones((3, 3))
             kernel[1, 1] = rng.rand() * 3 + 9
             kernel /= kernel.sum()
@@ -144,13 +147,13 @@ class Dataset():
 
     def add_real_back(self, rgb, labels, dpt, dpt_msk):
         real_item = self.real_gen()
-        with Image.open(os.path.join(self.root, real_item+'-depth.png')) as di:
+        with Image.open(os.path.join(self.root, real_item + "-depth.png")) as di:
             real_dpt = np.array(di)
-        with Image.open(os.path.join(self.root, real_item+'-label.png')) as li:
+        with Image.open(os.path.join(self.root, real_item + "-label.png")) as li:
             bk_label = np.array(li)
         bk_label = (bk_label <= 0).astype(rgb.dtype)
         bk_label_3c = np.repeat(bk_label[:, :, None], 3, 2)
-        with Image.open(os.path.join(self.root, real_item+'-color.png')) as ri:
+        with Image.open(os.path.join(self.root, real_item + "-color.png")) as ri:
             back = np.array(ri)[:, :, :3] * bk_label_3c
         dpt_back = real_dpt.astype(np.float32) * bk_label.astype(np.float32)
 
@@ -158,8 +161,9 @@ class Dataset():
         msk_back = np.repeat(msk_back[:, :, None], 3, 2)
         rgb = rgb * (msk_back == 0).astype(rgb.dtype) + back * msk_back
 
-        dpt = dpt * (dpt_msk > 0).astype(dpt.dtype) + \
-            dpt_back * (dpt_msk <= 0).astype(dpt.dtype)
+        dpt = dpt * (dpt_msk > 0).astype(dpt.dtype) + dpt_back * (dpt_msk <= 0).astype(
+            dpt.dtype
+        )
         return rgb, dpt
 
     def dpt_2_pcld(self, dpt, cam_scale, K):
@@ -176,26 +180,26 @@ class Dataset():
         return dpt_3d
 
     def get_item(self, item_name):
-        with Image.open(os.path.join(self.root, item_name+'-depth.png')) as di:
+        with Image.open(os.path.join(self.root, item_name + "-depth.png")) as di:
             dpt_um = np.array(di)
-        with Image.open(os.path.join(self.root, item_name+'-label.png')) as li:
+        with Image.open(os.path.join(self.root, item_name + "-label.png")) as li:
             labels = np.array(li)
         rgb_labels = labels.copy()
-        meta = scio.loadmat(os.path.join(self.root, item_name+'-meta.mat'))
-        if item_name[:8] != 'data_syn' and int(item_name[5:9]) >= 60:
-            K = config.intrinsic_matrix['ycb_K2']
+        meta = scio.loadmat(os.path.join(self.root, item_name + "-meta.mat"))
+        if item_name[:8] != "data_syn" and int(item_name[5:9]) >= 60:
+            K = config.intrinsic_matrix["ycb_K2"]
         else:
-            K = config.intrinsic_matrix['ycb_K1']
+            K = config.intrinsic_matrix["ycb_K1"]
 
-        with Image.open(os.path.join(self.root, item_name+'-color.png')) as ri:
+        with Image.open(os.path.join(self.root, item_name + "-color.png")) as ri:
             if self.add_noise:
                 ri = self.trancolor(ri)
             rgb = np.array(ri)[:, :, :3]
-        rnd_typ = 'syn' if 'syn' in item_name else 'real'
-        cam_scale = meta['factor_depth'].astype(np.float32)[0][0]
+        rnd_typ = "syn" if "syn" in item_name else "real"
+        cam_scale = meta["factor_depth"].astype(np.float32)[0][0]
         msk_dp = dpt_um > 1e-6
 
-        if self.add_noise and rnd_typ == 'syn':
+        if self.add_noise and rnd_typ == "syn":
             rgb = self.rgb_add_noise(rgb)
             rgb, dpt_um = self.add_real_back(rgb, rgb_labels, dpt_um, msk_dp)
             if self.rng.rand() > 0.8:
@@ -204,10 +208,8 @@ class Dataset():
         dpt_um = bs_utils.fill_missing(dpt_um, cam_scale, 1)
         msk_dp = dpt_um > 1e-6
 
-        dpt_mm = (dpt_um.copy()/10).astype(np.uint16)
-        nrm_map = normalSpeed.depth_normal(
-            dpt_mm, K[0][0], K[1][1], 5, 2000, 20, False
-        )
+        dpt_mm = (dpt_um.copy() / 10).astype(np.uint16)
+        nrm_map = normalSpeed.depth_normal(dpt_mm, K[0][0], K[1][1], 5, 2000, 20, False)
         if self.debug:
             show_nrm_map = ((nrm_map + 1.0) * 127).astype(np.uint8)
             imshow("nrm_map", show_nrm_map)
@@ -223,11 +225,13 @@ class Dataset():
             return None
         if len(choose_2) > config.n_sample_points:
             c_mask = np.zeros(len(choose_2), dtype=int)
-            c_mask[:config.n_sample_points] = 1
+            c_mask[: config.n_sample_points] = 1
             np.random.shuffle(c_mask)
             choose_2 = choose_2[c_mask.nonzero()]
         else:
-            choose_2 = np.pad(choose_2, (0, config.n_sample_points-len(choose_2)), 'wrap')
+            choose_2 = np.pad(
+                choose_2, (0, config.n_sample_points - len(choose_2)), "wrap"
+            )
         choose = np.array(choose)[choose_2]
 
         sf_idx = np.arange(choose.shape[0])
@@ -241,30 +245,29 @@ class Dataset():
         choose = np.array([choose])
         cld_rgb_nrm = np.concatenate((cld, rgb_pt, nrm_pt), axis=1).transpose(1, 0)
 
-        cls_id_lst = meta['cls_indexes'].flatten().astype(np.uint32)
-        RTs, kp3ds, ctr3ds, cls_ids, kp_targ_ofst, ctr_targ_ofst = self.get_pose_gt_info(
-            cld, labels_pt, cls_id_lst, meta
+        cls_id_lst = meta["cls_indexes"].flatten().astype(np.uint32)
+        RTs, kp3ds, ctr3ds, cls_ids, kp_targ_ofst, ctr_targ_ofst = (
+            self.get_pose_gt_info(cld, labels_pt, cls_id_lst, meta)
         )
 
         h, w = rgb_labels.shape
         dpt_6c = np.concatenate((dpt_xyz, nrm_map[:, :, :3]), axis=2).transpose(2, 0, 1)
-        rgb = np.transpose(rgb, (2, 0, 1)) # hwc2chw
+        rgb = np.transpose(rgb, (2, 0, 1))  # hwc2chw
 
-        xyz_lst = [dpt_xyz.transpose(2, 0, 1)] # c, h, w
+        xyz_lst = [dpt_xyz.transpose(2, 0, 1)]  # c, h, w
         msk_lst = [dpt_xyz[2, :, :] > 1e-8]
 
         for i in range(3):
-            scale = pow(2, i+1)
-            nh, nw = h // pow(2, i+1), w // pow(2, i+1)
+            scale = pow(2, i + 1)
+            nh, nw = h // pow(2, i + 1), w // pow(2, i + 1)
             ys, xs = np.mgrid[:nh, :nw]
-            xyz_lst.append(xyz_lst[0][:, ys*scale, xs*scale])
+            xyz_lst.append(xyz_lst[0][:, ys * scale, xs * scale])
             msk_lst.append(xyz_lst[-1][2, :, :] > 1e-8)
         sr2dptxyz = {
-            pow(2, ii): item.reshape(3, -1).transpose(1, 0) for ii, item in enumerate(xyz_lst)
+            pow(2, ii): item.reshape(3, -1).transpose(1, 0)
+            for ii, item in enumerate(xyz_lst)
         }
-        sr2msk = {
-            pow(2, ii): item.reshape(-1) for ii, item in enumerate(msk_lst)
-        }
+        sr2msk = {pow(2, ii): item.reshape(-1) for ii, item in enumerate(msk_lst)}
 
         rgb_ds_sr = [4, 8, 8, 8]
         n_ds_layers = 4
@@ -272,41 +275,61 @@ class Dataset():
         inputs = {}
         # DownSample stage
         for i in range(n_ds_layers):
-            nei_idx = DP.knn_search(
-                cld[None, ...], cld[None, ...], 16
-            ).astype(np.int32).squeeze(0)
-            sub_pts = cld[:cld.shape[0] // pcld_sub_s_r[i], :]
-            pool_i = nei_idx[:cld.shape[0] // pcld_sub_s_r[i], :]
-            up_i = DP.knn_search(
-                sub_pts[None, ...], cld[None, ...], 1
-            ).astype(np.int32).squeeze(0)
-            inputs['cld_xyz%d'%i] = cld.astype(np.float32).copy()
-            inputs['cld_nei_idx%d'%i] = nei_idx.astype(np.int32).copy()
-            inputs['cld_sub_idx%d'%i] = pool_i.astype(np.int32).copy()
-            inputs['cld_interp_idx%d'%i] = up_i.astype(np.int32).copy()
-            nei_r2p = DP.knn_search(
-                sr2dptxyz[rgb_ds_sr[i]][None, ...], sub_pts[None, ...], 16
-            ).astype(np.int32).squeeze(0)
-            inputs['r2p_ds_nei_idx%d'%i] = nei_r2p.copy()
-            nei_p2r = DP.knn_search(
-                sub_pts[None, ...], sr2dptxyz[rgb_ds_sr[i]][None, ...], 1
-            ).astype(np.int32).squeeze(0)
-            inputs['p2r_ds_nei_idx%d'%i] = nei_p2r.copy()
+            nei_idx = (
+                DP.knn_search(cld[None, ...], cld[None, ...], 16)
+                .astype(np.int32)
+                .squeeze(0)
+            )
+            sub_pts = cld[: cld.shape[0] // pcld_sub_s_r[i], :]
+            pool_i = nei_idx[: cld.shape[0] // pcld_sub_s_r[i], :]
+            up_i = (
+                DP.knn_search(sub_pts[None, ...], cld[None, ...], 1)
+                .astype(np.int32)
+                .squeeze(0)
+            )
+            inputs["cld_xyz%d" % i] = cld.astype(np.float32).copy()
+            inputs["cld_nei_idx%d" % i] = nei_idx.astype(np.int32).copy()
+            inputs["cld_sub_idx%d" % i] = pool_i.astype(np.int32).copy()
+            inputs["cld_interp_idx%d" % i] = up_i.astype(np.int32).copy()
+            nei_r2p = (
+                DP.knn_search(
+                    sr2dptxyz[rgb_ds_sr[i]][None, ...], sub_pts[None, ...], 16
+                )
+                .astype(np.int32)
+                .squeeze(0)
+            )
+            inputs["r2p_ds_nei_idx%d" % i] = nei_r2p.copy()
+            nei_p2r = (
+                DP.knn_search(sub_pts[None, ...], sr2dptxyz[rgb_ds_sr[i]][None, ...], 1)
+                .astype(np.int32)
+                .squeeze(0)
+            )
+            inputs["p2r_ds_nei_idx%d" % i] = nei_p2r.copy()
             cld = sub_pts
 
         n_up_layers = 3
         rgb_up_sr = [4, 2, 2]
         for i in range(n_up_layers):
-            r2p_nei = DP.knn_search(
-                sr2dptxyz[rgb_up_sr[i]][None, ...],
-                inputs['cld_xyz%d'%(n_ds_layers-i-1)][None, ...], 16
-            ).astype(np.int32).squeeze(0)
-            inputs['r2p_up_nei_idx%d'%i] = r2p_nei.copy()
-            p2r_nei = DP.knn_search(
-                inputs['cld_xyz%d'%(n_ds_layers-i-1)][None, ...],
-                sr2dptxyz[rgb_up_sr[i]][None, ...], 1
-            ).astype(np.int32).squeeze(0)
-            inputs['p2r_up_nei_idx%d'%i] = p2r_nei.copy()
+            r2p_nei = (
+                DP.knn_search(
+                    sr2dptxyz[rgb_up_sr[i]][None, ...],
+                    inputs["cld_xyz%d" % (n_ds_layers - i - 1)][None, ...],
+                    16,
+                )
+                .astype(np.int32)
+                .squeeze(0)
+            )
+            inputs["r2p_up_nei_idx%d" % i] = r2p_nei.copy()
+            p2r_nei = (
+                DP.knn_search(
+                    inputs["cld_xyz%d" % (n_ds_layers - i - 1)][None, ...],
+                    sr2dptxyz[rgb_up_sr[i]][None, ...],
+                    1,
+                )
+                .astype(np.int32)
+                .squeeze(0)
+            )
+            inputs["p2r_up_nei_idx%d" % i] = p2r_nei.copy()
 
         show_rgb = rgb.transpose(1, 2, 0).copy()[:, :, ::-1]
         if self.debug:
@@ -316,7 +339,7 @@ class Dataset():
                 print(show_rgb.shape, pcld.shape)
                 srgb = bs_utils.paste_p2ds(show_rgb.copy(), p2ds, (0, 0, 255))
                 imshow("rz_pcld_%d" % ip, srgb)
-                p2ds = bs_utils.project_p3d(inputs['cld_xyz%d'%ip], cam_scale, K)
+                p2ds = bs_utils.project_p3d(inputs["cld_xyz%d" % ip], cam_scale, K)
                 srgb1 = bs_utils.paste_p2ds(show_rgb.copy(), p2ds, (0, 0, 255))
                 imshow("rz_pcld_%d_rnd" % ip, srgb1)
 
@@ -342,7 +365,7 @@ class Dataset():
                 K=K.astype(np.float32),
             )
             item_dict.update(extra_d)
-            item_dict['normal_map'] = nrm_map[:, :, :3].astype(np.float32)
+            item_dict["normal_map"] = nrm_map[:, :, :3].astype(np.float32)
         return item_dict
 
     def get_pose_gt_info(self, cld, labels, cls_id_lst, meta):
@@ -353,34 +376,34 @@ class Dataset():
         kp_targ_ofst = np.zeros((config.n_sample_points, config.n_keypoints, 3))
         ctr_targ_ofst = np.zeros((config.n_sample_points, 3))
         for i, cls_id in enumerate(cls_id_lst):
-            r = meta['poses'][:, :, i][:, 0:3]
-            t = np.array(meta['poses'][:, :, i][:, 3:4].flatten()[:, None])
+            r = meta["poses"][:, :, i][:, 0:3]
+            t = np.array(meta["poses"][:, :, i][:, 3:4].flatten()[:, None])
             RT = np.concatenate((r, t), axis=1)
             RTs[i] = RT
 
-            ctr = bs_utils.get_ctr(self.cls_lst[cls_id-1]).copy()[:, None]
+            ctr = bs_utils.get_ctr(self.cls_lst[cls_id - 1]).copy()[:, None]
             ctr = np.dot(ctr.T, r.T) + t[:, 0]
             ctr3ds[i, :] = ctr[0]
             msk_idx = np.where(labels == cls_id)[0]
 
-            target_offset = np.array(np.add(cld, -1.0*ctr3ds[i, :]))
-            ctr_targ_ofst[msk_idx,:] = target_offset[msk_idx, :]
+            target_offset = np.array(np.add(cld, -1.0 * ctr3ds[i, :]))
+            ctr_targ_ofst[msk_idx, :] = target_offset[msk_idx, :]
             cls_ids[i, :] = np.array([cls_id])
 
-            key_kpts = ''
+            key_kpts = ""
             if config.n_keypoints == 8:
-                kp_type = 'farthest'
+                kp_type = "farthest"
             else:
-                kp_type = 'farthest{}'.format(config.n_keypoints)
+                kp_type = "farthest{}".format(config.n_keypoints)
             kps = bs_utils.get_kps(
-                self.cls_lst[cls_id-1], kp_type=kp_type, ds_type='ycb'
+                self.cls_lst[cls_id - 1], kp_type=kp_type, ds_type="ycb"
             ).copy()
             kps = np.dot(kps, r.T) + t[:, 0]
             kp3ds[i] = kps
 
             target = []
             for kp in kps:
-                target.append(np.add(cld, -1.0*kp))
+                target.append(np.add(cld, -1.0 * kp))
             target_offset = np.array(target).transpose(1, 0, 2)  # [npts, nkps, c]
             kp_targ_ofst[msk_idx, :, :] = target_offset[msk_idx, :, :]
         return RTs, kp3ds, ctr3ds, cls_ids, kp_targ_ofst, ctr_targ_ofst
@@ -389,7 +412,7 @@ class Dataset():
         return len(self.all_lst)
 
     def __getitem__(self, idx):
-        if self.dataset_name == 'train':
+        if self.dataset_name == "train":
             item_name = self.real_syn_gen()
             data = self.get_item(item_name)
             while data is None:
@@ -406,42 +429,39 @@ def main():
     global DEBUG
     DEBUG = True
     ds = {}
-    ds['train'] = Dataset('train', DEBUG=True)
+    ds["train"] = Dataset("train", DEBUG=True)
     # ds['val'] = Dataset('validation')
-    ds['test'] = Dataset('test', DEBUG=True)
-    idx = dict(
-        train=0,
-        val=0,
-        test=0
-    )
+    ds["test"] = Dataset("test", DEBUG=True)
+    idx = dict(train=0, val=0, test=0)
     while True:
         # for cat in ['val', 'test']:
         # for cat in ['train']:
-        for cat in ['test']:
+        for cat in ["test"]:
             datum = ds[cat].__getitem__(idx[cat])
             idx[cat] += 1
-            K = datum['K']
-            cam_scale = datum['cam_scale']
-            rgb = datum['rgb'].transpose(1, 2, 0)[...,::-1].copy()# [...,::-1].copy()
-            for i in range(6):
-                pcld = datum['cld_rgb_nrm'][:3, :].transpose(1, 0).copy()
+            K = datum["K"]
+            cam_scale = datum["cam_scale"]
+            rgb = datum["rgb"].transpose(1, 2, 0)[..., ::-1].copy()  # [...,::-1].copy()
+            for i in range(2):
+                pcld = datum["cld_rgb_nrm"][:3, :].transpose(1, 0).copy()
                 p2ds = bs_utils.project_p3d(pcld, cam_scale, K)
                 # rgb = bs_utils.draw_p2ds(rgb, p2ds)
-                kp3d = datum['kp_3ds'][i]
+                kp3d = datum["kp_3ds"][i]
                 if kp3d.sum() < 1e-6:
                     break
                 kp_2ds = bs_utils.project_p3d(kp3d, cam_scale, K)
                 rgb = bs_utils.draw_p2ds(
-                    rgb, kp_2ds, 3, bs_utils.get_label_color(datum['cls_ids'][i][0], mode=1)
+                    rgb,
+                    kp_2ds,
+                    3,
+                    bs_utils.get_label_color(datum["cls_ids"][i][0], mode=1),
                 )
-                ctr3d = datum['ctr_3ds'][i]
+                ctr3d = datum["ctr_3ds"][i]
                 ctr_2ds = bs_utils.project_p3d(ctr3d[None, :], cam_scale, K)
-                rgb = bs_utils.draw_p2ds(
-                    rgb, ctr_2ds, 4, (0, 0, 255)
-                )
-                imshow('{}_rgb'.format(cat), rgb)
+                rgb = bs_utils.draw_p2ds(rgb, ctr_2ds, 4, (0, 0, 255))
+                imshow("{}_rgb".format(cat), rgb)
                 cmd = waitKey(0)
-                if cmd == ord('q'):
+                if cmd == ord("q"):
                     exit()
                 else:
                     continue
