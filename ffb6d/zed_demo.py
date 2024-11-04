@@ -143,7 +143,7 @@ def load_checkpoint(model=None, optimizer=None, filename="checkpoint"):
 
 
 def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
-    result_6d = 0
+    result_6d = None
     model.eval()
     with torch.set_grad_enabled(False):
         cu_dt = {}
@@ -246,10 +246,7 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
     #     cv2.destroyAllWindows()
     #     zed.close()
     #       exit()
-    if result_6d != 0:
-        return result_6d
-    else:
-        return None
+    return result_6d
 
 
 def main():
@@ -285,7 +282,7 @@ def main():
             zed.retrieve_measure(Depth_image, sl.MEASURE.DEPTH)
             depth_image_rgba = Depth_image.get_data()
             depth_image = cv2.cvtColor(depth_image_rgba, cv2.COLOR_RGBA2RGB)
-            depth_image *= 212.5
+            depth_image *= 255 / (depth_image.max() - depth_image.min())
             depth_image = 255 - depth_image
             cv2.imwrite("tmp_depth.png", depth_image)
             depth_image = cv2.imread("tmp_depth.png", cv2.IMREAD_GRAYSCALE)
