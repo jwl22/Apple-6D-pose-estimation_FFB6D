@@ -148,6 +148,8 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
     with torch.set_grad_enabled(False):
         cu_dt = {}
         # device = torch.device('cuda:{}'.format(args.local_rank))
+        if data == None:
+            return None
         for key in data.keys():
             # if data[key].dtype in [np.float32, np.uint8]:
             #     cu_dt[key] = torch.from_numpy(data[key].astype(np.float32)).cuda()
@@ -189,18 +191,18 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
                 None,
                 None,
             )
-        else:
-            pred_pose_lst = cal_frame_poses_lm(
-                pcld[0],
-                classes_rgbd[0],
-                end_points["pred_ctr_ofs"][0],
-                end_points["pred_kp_ofs"][0],
-                True,
-                config.n_objects,
-                False,
-                obj_id,
-            )
-            pred_cls_ids = np.array([[1]])
+        # else:
+        #     pred_pose_lst = cal_frame_poses_lm(
+        #         pcld[0],
+        #         classes_rgbd[0],
+        #         end_points["pred_ctr_ofs"][0],
+        #         end_points["pred_kp_ofs"][0],
+        #         True,
+        #         config.n_objects,
+        #         False,
+        #         obj_id,
+        #     )
+        #     pred_cls_ids = np.array([[1]])
 
         np_rgb = cu_dt["rgb"].cpu().numpy().astype("uint8")[0].transpose(1, 2, 0).copy()
         if args.dataset == "ycb":
@@ -218,10 +220,10 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
             mesh_pts = np.dot(mesh_pts, pose[:, :3].T) + pose[:, 3]
             if args.dataset == "ycb":
                 K = config.intrinsic_matrix["ycb_K1"]
-            else:
-                K = config.intrinsic_matrix["linemod"]
+            # else:
+            #     K = config.intrinsic_matrix["linemod"]
             mesh_p2ds = bs_utils.project_p3d(mesh_pts, 1.0, K)
-            color = bs_utils.get_label_color(obj_id, n_obj=6, mode=2)
+            color = bs_utils.get_label_color(obj_id, n_obj=2, mode=2)
             np_rgb = bs_utils.draw_p2ds(np_rgb, mesh_p2ds, color=color)
         vis_dir = os.path.join(config.log_eval_dir, "pose_vis")
         ensure_fd(vis_dir)
@@ -229,9 +231,9 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
         if args.dataset == "ycb":
             bgr = np_rgb
             ori_bgr = ori_rgb
-        else:
-            bgr = np_rgb[:, :, ::-1]
-            ori_bgr = ori_rgb[:, :, ::-1]
+        # else:
+        #     bgr = np_rgb[:, :, ::-1]
+        #     ori_bgr = ori_rgb[:, :, ::-1]
         # cv2.imwrite(f_pth, bgr)
         if args.show:
             imshow("projected_pose_rgb", bgr)
@@ -282,10 +284,15 @@ def main():
             zed.retrieve_measure(Depth_image, sl.MEASURE.DEPTH)
             depth_image_rgba = Depth_image.get_data()
             depth_image = cv2.cvtColor(depth_image_rgba, cv2.COLOR_RGBA2RGB)
+            depth_image[depth_image == float("inf")] = -1
+            depth_image[depth_image == -1] = depth_image.max()
             depth_image *= 255 / (depth_image.max() - depth_image.min())
+            # depth_image *= 125
             depth_image = 255 - depth_image
-            cv2.imwrite("tmp_depth.png", depth_image)
-            depth_image = cv2.imread("tmp_depth.png", cv2.IMREAD_GRAYSCALE)
+            # cv2.imwrite("tmp_depth.png", depth_image)
+            # depth_image = cv2.imread("tmp_depth.png", cv2.IMREAD_GRAYSCALE)
+            depth_image = cv2.cvtColor(depth_image, cv2.COLOR_RGB2GRAY)
+            # imshow("depth", depth_image)
             di = depth_image
 
             zed.retrieve_image(Left_image, sl.VIEW.LEFT)
