@@ -148,6 +148,8 @@ def cal_view_pred_pose(model, data, epoch=0, obj_id=-1):
     with torch.set_grad_enabled(False):
         cu_dt = {}
         # device = torch.device('cuda:{}'.format(args.local_rank))
+        if data == None:
+            return None
         for key in data.keys():
             # if data[key].dtype in [np.float32, np.uint8]:
             #     cu_dt[key] = torch.from_numpy(data[key].astype(np.float32)).cuda()
@@ -282,11 +284,15 @@ def main():
             zed.retrieve_measure(Depth_image, sl.MEASURE.DEPTH)
             depth_image_rgba = Depth_image.get_data()
             depth_image = cv2.cvtColor(depth_image_rgba, cv2.COLOR_RGBA2RGB)
+            depth_image[depth_image == float("inf")] = -1
+            depth_image[depth_image == -1] = depth_image.max()
             depth_image *= 255 / (depth_image.max() - depth_image.min())
+            # depth_image *= 125
             depth_image = 255 - depth_image
             # cv2.imwrite("tmp_depth.png", depth_image)
             # depth_image = cv2.imread("tmp_depth.png", cv2.IMREAD_GRAYSCALE)
             depth_image = cv2.cvtColor(depth_image, cv2.COLOR_RGB2GRAY)
+            # imshow("depth", depth_image)
             di = depth_image
 
             zed.retrieve_image(Left_image, sl.VIEW.LEFT)
