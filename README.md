@@ -4,6 +4,8 @@ FFB6D original code: https://github.com/ethnhe/FFB6D </br>
 FFB6D paper: https://arxiv.org/abs/2103.02242 <br><br>
 ![000082-color](https://github.com/jwl22/Apple-6D-pose-estimation_FFB6D/assets/96900435/0a32d38b-413a-44d2-9387-17ca7c36a74d)
 ![82_pick](https://github.com/jwl22/Apple-6D-pose-estimation_FFB6D/assets/96900435/f304c336-5406-4638-9d14-6feae4dd251e)
+![image](https://github.com/user-attachments/assets/a67c0e9e-0ea4-4f5f-b101-d1e2b65815d5)
+
 
 <br>
 <br>
